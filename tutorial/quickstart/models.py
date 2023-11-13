@@ -1,8 +1,9 @@
+from datetime import date
 from django.db import models
 from multiselectfield import MultiSelectField
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils import timezone
+
 
 #User class for the user model
 class UserProfile(AbstractUser):
@@ -11,18 +12,15 @@ class UserProfile(AbstractUser):
     is_applicant = models.BooleanField('Applicant Status', default=False)
     is_manager = models.BooleanField('Manager Status', default=False)
 
-    def __str__(self):
-        return self.username
-    
 class Applicant(models.Model):
-    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
     points_scored = models.IntegerField(default=0)
 
     def __str__(self):
         return self.user.username
 
 class Manager(models.Model):
-    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
     company = models.CharField(max_length=100)
     
     def __str__(self):
@@ -33,9 +31,15 @@ class Job(models.Model):
     job_name = models.CharField(max_length=100)
     company = models.CharField(max_length=100)
     position = models.CharField(max_length=100)
-    date_posted = models.DateField(default=timezone.now)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    date_posted = models.DateField(default=date.today)
     #status = models.CharField(max_length=50,choices = status_choices)
-    job_status = models.CharField(max_length=100)
+    listing_status = [
+        ("Open", "Open"),
+        ("Closed", "Closed")
+    ]
+    job_status = MultiSelectField(choices=listing_status, max_choices=1, max_length=100)
     hiring_manager = models.ForeignKey(Manager, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -76,6 +80,7 @@ class JobInterview(models.Model):
 
 class Internship(models.Model):
     internship_id = models.AutoField (primary_key=True)
+    internship_name = models.CharField(max_length=100)
     hiring_manager = models.ForeignKey(Manager, on_delete=models.CASCADE)
     company = models.CharField(max_length=100)
     position = models.CharField(max_length=100)
