@@ -21,11 +21,16 @@ from .quickstart import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path('login/', views.login_view),
+    path('users/', views.UserProfileView.as_view()), 
     path('admin/', admin.site.urls),
+    path('jobs/post/', views.JobListView.as_view()),
     path('jobs/', views.JobListView.as_view()),    
+    path('jobs/open/', views.view_open),    
+    path('internships/', views.InternshipListView.as_view()),    
+    path('internships/post/', views.InternshipListView.as_view()),    
     path('accounts/', include('django.contrib.auth.urls')),
-    path('accounts/signup/applicant', views.ApplicantSignupView.as_view()),
-    #path('accounts/signup/manager', )
+
 
 
 ]
