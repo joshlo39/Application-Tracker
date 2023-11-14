@@ -12,6 +12,7 @@ from django.views.generic import CreateView
 from django.contrib.auth import login, authenticate
 from django.shortcuts import redirect
 from rest_framework.decorators import api_view
+from django.core.exceptions import ValidationError 
 
 def index(request):
     return HttpResponse("Gamified Job Application Tracker")
@@ -75,13 +76,30 @@ def login_view(request):
         
 class JobListView(APIView):
     #list all jobs, or create a new job listing.
-    def get(self, request):
-        jobs = Job.objects.all()
-        serializer_context={'request': request}
-        serializer = JobSerializer(jobs, context=serializer_context, many=True)
-        return Response(serializer.data)
-    
-    
+
+    def get(self, request, input_state=None, input_city=None):
+        try:
+            jobs = Job.objects.filter(job_status__contains="Open")
+            print(jobs)
+            if input_state and input_city:
+                jobs = jobs.filter(state=input_state, city=input_city)
+            elif input_state:
+                jobs = jobs.filter(state=input_state)
+            elif input_city:
+                jobs = jobs.filter(city=input_city)
+
+            serializer = JobSerializer(jobs, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            # Handle specific validation errors (e.g., invalid filter parameters)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Handle any other kind of exception
+            # This is a catch-all for unexpected errors
+            return Response({'error': 'Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def post(self, request):
         serializer = JobSerializer(data=request.data)
         if request.user.is_authenticated:
