@@ -2,16 +2,16 @@ from datetime import date
 from django.db import models
 from multiselectfield import MultiSelectField
 from django.contrib.auth.models import AbstractUser
-from django.db import models
 
 
 #User class for the user model
 class UserProfile(AbstractUser):
-    username = models.CharField(max_length = 50, blank = True, null = True, unique = True)
-    email = models.EmailField(max_length=100)
     is_applicant = models.BooleanField('Applicant Status', default=False)
     is_manager = models.BooleanField('Manager Status', default=False)
 
+    def __str__(self):
+        return self.username
+    
 class Applicant(models.Model):
     user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
     points_scored = models.IntegerField(default=0)
@@ -84,7 +84,9 @@ class Internship(models.Model):
     hiring_manager = models.ForeignKey(Manager, on_delete=models.CASCADE)
     company = models.CharField(max_length=100)
     position = models.CharField(max_length=100)
-    date_posted = models.DateField()
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    date_posted = models.DateField(default=date.today)
     #status = models.CharField(max_length=50,choices = status_choices)
     internship_status = models.CharField(max_length=100)
 
