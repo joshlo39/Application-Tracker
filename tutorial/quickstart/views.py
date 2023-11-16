@@ -1,4 +1,5 @@
 
+from multiprocessing import managers
 from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -29,54 +30,68 @@ def view_open(self):
 
 class UserProfileView(APIView):
     def get(self, request, format=None):
-        user = UserProfile.objects.all()
-        serializer = UserSerializer(user, many=True)
-        return Response(serializer.data)
+        if request.user.is_authenticated:
+            user = request.user
+            if not request.user.is_staff:  # If not admin, restrict to the logged-in user
+                user_profile = UserProfile.objects.get(username=user.username)
+            else:
+                user_profile = UserProfile.objects.all()
+            # Check if user_profile is a single instance or a queryset
+            if isinstance(user_profile, UserProfile):
+                serializer = UserSerializer(user_profile)
+            else:
+                serializer = UserSerializer(user_profile, many=True)
+            return Response(serializer.data)
+        else:
+            return Response("Please log in or create an account to view your profile.")
+
 
     def post(self, request, format=None):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
+            password = request.data.get('password')
             cur_user = serializer.save()
-            if (UserProfile.is_manager):
-                    Manager.objects.create(user=cur_user)
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-            if (UserProfile.is_applicant):
+            cur_user.set_password(password)
+            cur_user.save()
+            if (cur_user.is_applicant):
                     Applicant.objects.create(user=cur_user)
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
+            elif (cur_user.is_manager):
+                    Manager.objects.create(user=cur_user)
+                    login(request, cur_user)
+                    return redirect('/register/manager_account/')            
             else:
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-def users(request):
-    if request.method == 'GET':
-        users = UserProfile.objects.all().values()
-        serializer = UserSerializer(users, many=True)
-        return JsonResponse(serializer.data, safe=False)
+@api_view(['PATCH'])
+def set_company(request):
+    user = request.user
+    manager = Manager.objects.get(user=user)
+    company = request.data.get('company')
+    manager.company = company
+    manager.save()
+    return Response("Company successfully added")
 
 @api_view(['POST'])
-def create_profile(request):
-    serializer=UserSerializer(data=request.data)
-    if (serializer.is_vaid):
-        if (serializer.is_manager):
-            redirect
-            Manager.objects.create(user=serializer)
-
-    
-@api_view(['GET', 'POST'])
 def login_view(request):
-    username = request.POST.get('username')
-    password = request.POST.get('password')
-    UserProfile = authenticate(request, username=username, password=password)
-    if UserProfile is not None:
-        login(request, UserProfile)
+    username = request.data.get('username')
+    password = request.data.get('password')
+    print(f"Attempting to authenticate with username: {username}, password: {password}") 
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        login(request, user)
+        return Response("Login Successful")
         # Redirect to a success page.
     else:
         return Response("Invalid Login Credentials")
+    
+
+
         
 class JobListView(APIView):
     #list all jobs, or create a new job listing.
-
     def get(self, request, input_state=None, input_city=None):
         try:
             jobs = Job.objects.filter(job_status__contains="Open")
@@ -101,13 +116,17 @@ class JobListView(APIView):
             return Response({'error': 'Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
-        serializer = JobSerializer(data=request.data)
         if request.user.is_authenticated:
+            user = request.user
             if request.user.is_manager:
-                Job.hiring_manager = request.user
+                manager = Manager.objects.get(user=user)
+                manager_id = manager.id
+                request.data['hiring_manager'] = manager_id
+                serializer = JobSerializer(data=request.data)
+                
                 if serializer.is_valid():
                     serializer.save()
-                    return Response(serializer.data, status=status.HTTP_201_created)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response("Must be logged into Manager Profile to post a Job Listing")
@@ -122,15 +141,19 @@ class InternshipListView(APIView):
         return Response(serializer.data)
     
     def post(self, request):
-        serializer = InternshipSerializer(data=request.data)
         if request.user.is_authenticated:
+            user = request.user
             if request.user.is_manager:
-                Internship.hiring_manager = request.user
+                manager = Manager.objects.get(user=user)
+                manager_id = manager.id
+                request.data['hiring_manager'] = manager_id
+                serializer = InternshipSerializer(data=request.data)                
                 if serializer.is_valid():
                     serializer.save()
-                    return Response(serializer.data, status=status.HTTP_201_created)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response("Must be logged into Manager Profile to post an Internship Listing")
+                return Response("Must be logged into a Manager Profile to post an Internship Listing")
+
     
    

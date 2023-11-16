@@ -22,18 +22,15 @@ from .quickstart import views
 urlpatterns = [
     path("", views.index, name="index"),
     path('login/', views.login_view),
+    path('register/', views.UserProfileView.as_view()), 
+    path('register/manager_account/', views.set_company, name='set_company'), 
     path('users/', views.UserProfileView.as_view()), 
     path('admin/', admin.site.urls),
-    path('jobs/post/', views.JobListView.as_view()),
     path('jobs/', views.JobListView.as_view()), #all jobs
     path('jobs/state/<str:input_state>/',views.JobListView.as_view()), #filter by state
     path('jobs/city/<str:input_city>/',views.JobListView.as_view()), #filter by city
     path('jobs/state/<str:input_state>/city/<str:input_city>',views.JobListView.as_view()),
     path('jobs/open/', views.view_open),    
     path('internships/', views.InternshipListView.as_view()),    
-    path('internships/post/', views.InternshipListView.as_view()),    
     path('accounts/', include('django.contrib.auth.urls')),
-
-
-
 ]
