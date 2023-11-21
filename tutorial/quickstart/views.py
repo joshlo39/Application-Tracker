@@ -1,5 +1,8 @@
 
+from ast import Delete
+from cgi import print_form
 from multiprocessing import managers
+from pickle import GET
 from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -10,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import JsonResponse
 from django.views.generic import CreateView
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import redirect
 from rest_framework.decorators import api_view
 from django.core.exceptions import ValidationError 
@@ -32,7 +35,7 @@ class UserProfileView(APIView):
     def get(self, request, format=None):
         if request.user.is_authenticated:
             user = request.user
-            if not request.user.is_staff:  # If not admin, restrict to the logged-in user
+            if not request.user.is_staff:  #If not admin, restrict to the logged-in user
                 user_profile = UserProfile.objects.get(username=user.username)
             else:
                 user_profile = UserProfile.objects.all()
@@ -86,10 +89,12 @@ def login_view(request):
         # Redirect to a success page.
     else:
         return Response("Invalid Login Credentials")
-    
 
+@api_view(['GET'])
+def logout_view(request):
+    logout(request)
+    return Response("You have been logged out.")
 
-        
 class JobListView(APIView):
     #list all jobs, or create a new job listing.
     def get(self, request, input_state=None, input_city=None):
@@ -130,8 +135,8 @@ class JobListView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response("Must be logged into Manager Profile to post a Job Listing")
-
-
+    
+    
 class InternshipListView(APIView):
     #list all jobs, or create a new job listing.
     def get(self, request, format=None):
@@ -155,5 +160,34 @@ class InternshipListView(APIView):
             else:
                 return Response("Must be logged into a Manager Profile to post an Internship Listing")
 
+
+
+class my_jobs(APIView):
+
+
+    def get(request):
+       if request.user.is_authenticated:
+            user = request.user
+            if request.user.is_manager:
+                manager = Manager.objects.get(user = user)
+                jobs = Job.objects.filter(hiring_manager = manager)
+                serializer = JobSerializer(jobs, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response("Must be logged into a Manager Profile to view your Company Listings.")
     
-   
+    def patch(self, request):
+       if request.user.is_authenticated:
+            user = request.user
+            if request.user.is_manager:
+
+                manager = Manager.objects.get(user=user)
+                manager_id = manager.id
+                request.data['hiring_manager'] = manager_id
+                serializer = JobSerializer(data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response("Invalid Credentials", status=status.HTTP_401_UNAUTHORIZED)
+
