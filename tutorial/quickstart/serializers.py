@@ -1,5 +1,5 @@
 from datetime import date
-from .models import Internship, UserProfile, Job, JobInterview, ApplicantJob, Applicant, Manager
+from .models import Internship, UserProfile, Job, JobInterview, ApplicantJob, Applicant, Manager, ApplicantInternship, InternshipInterview
 from rest_framework import serializers
 
 
@@ -40,5 +40,12 @@ class JobInterviewSerializer(serializers.HyperlinkedModelSerializer):
         model = JobInterview
         fields = ['interview_id','job_id','date','type_of_interview','dsa_question']
 
+class ApplicantInternshipSerializer(serializers.ModelSerializer):
+    class Meta: 
+        model = ApplicantInternship
+        fields = '__all__'
 
-  
+class InternshipInterviewSerializer(serializers.ModelSerializer):
+    class Meta: 
+        model = InternshipInterview
+        fields = '__all__'

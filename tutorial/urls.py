@@ -22,11 +22,13 @@ from .quickstart import views
 urlpatterns = [
     path("", views.index, name="index"),
     path('login/', views.login_view),
+    path('logout/', views.logout_view),
     path('register/', views.UserProfileView.as_view()), 
     path('register/manager_account/', views.set_company, name='set_company'), 
     path('users/', views.UserProfileView.as_view()), 
     path('admin/', admin.site.urls),
     path('jobs/', views.JobListView.as_view()), #all jobs
+    path('my_jobs/', views.my_jobs.as_view()),
     path('jobs/state/<str:input_state>/',views.JobListView.as_view()), #filter by state
     path('jobs/city/<str:input_city>/',views.JobListView.as_view()), #filter by city
     path('jobs/state/<str:input_state>/city/<str:input_city>',views.JobListView.as_view()),
