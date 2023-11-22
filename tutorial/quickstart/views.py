@@ -3,6 +3,7 @@ from ast import Delete
 from cgi import print_form
 from multiprocessing import managers
 from pickle import GET
+from pickletools import read_int4
 from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -160,11 +161,16 @@ class InternshipListView(APIView):
             else:
                 return Response("Must be logged into a Manager Profile to post an Internship Listing")
 
-
+class JobDetailView(APIView):
+    def get(self, request, job_id):
+        jobs = Job.objects.get(job_id=job_id)
+        serializer = JobSerializer(jobs)
+        if serializer.is_valid:
+            return Response(serializer.data)
+        else:
+            return Response("Error loading Job", status=status.HTTP_400_BAD_REQUEST)
 
 class my_jobs(APIView):
-
-
     def get(request):
        if request.user.is_authenticated:
             user = request.user
@@ -180,7 +186,6 @@ class my_jobs(APIView):
        if request.user.is_authenticated:
             user = request.user
             if request.user.is_manager:
-
                 manager = Manager.objects.get(user=user)
                 manager_id = manager.id
                 request.data['hiring_manager'] = manager_id
@@ -191,3 +196,36 @@ class my_jobs(APIView):
                 else:
                     return Response("Invalid Credentials", status=status.HTTP_401_UNAUTHORIZED)
 
+
+@api_view(['PUT'])
+def ApplyView(request, job_id):
+    if request.user.is_authenticated:
+        if request.user.is_applicant:
+            applicant = Applicant.objects.get(user=request.user)
+            job = Job.objects.get(job_id = job_id)
+            print(job_id)
+            job.job_applicants.add(applicant)
+            return Response("Successfully Applied", status=status.HTTP_202_ACCEPTED)
+        return Response("Error with application. Ensure you are signed in to an applicant profile, and that the job listing is open", status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+def view_applicants(request, job_id):
+    if request.user.is_authenticated:
+        user = request.user
+        if request.user.is_manager:
+            manager = Manager.objects.get(user=user)
+            print("Manager:", manager)
+            print("1")
+            job = Job.objects.get(job_id=job_id)
+            print("2")
+            applicants = job.job_applicants.all()
+            print(type(applicants))
+
+            print("3")
+            if job.hiring_manager == manager:
+                print("4")
+                serializer = ApplicantSerializer(applicants, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response("Error loading Applicants", status=status.HTTP_400_BAD_REQUEST)
+    return Response("Please login to view this page", status=status.HTTP_401_UNAUTHORIZED)
