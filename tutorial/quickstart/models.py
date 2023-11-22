@@ -1,5 +1,6 @@
 from datetime import date
 from django.db import models
+from django.forms import CharField, IntegerField
 from multiselectfield import MultiSelectField
 from django.contrib.auth.models import AbstractUser
 
@@ -41,7 +42,7 @@ class Job(models.Model):
     ]
     job_status = MultiSelectField(choices=listing_status, max_choices=1, max_length=100)
     hiring_manager = models.ForeignKey(Manager, on_delete=models.CASCADE)
-
+    job_applicants = models.ManyToManyField(Applicant)
     def __str__(self):
         return self.job_name 
 
@@ -120,3 +121,11 @@ class InternshipInterview(models.Model):
     #type_of_interview = MultiSelectField(choices = type_choices)
     type_of_interview = models.CharField(max_length=100)
     dsa_question = models.CharField(max_length = 100,blank=True, null = True)
+
+class Resume(models.Model):
+    applicant = models.OneToOneField(Applicant, on_delete=models.CASCADE, primary_key=True)
+    Name = models.CharField(max_length=250)
+    skills = models.CharField(max_length=250)
+    phone_number = models.CharField(max_length=12)
+    degree = models.CharField(max_length=250, null=True)
+

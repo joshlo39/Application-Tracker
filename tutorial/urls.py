@@ -28,6 +28,9 @@ urlpatterns = [
     path('users/', views.UserProfileView.as_view()), 
     path('admin/', admin.site.urls),
     path('jobs/', views.JobListView.as_view()), #all jobs
+    path('jobs/<job_id>/', views.JobDetailView.as_view()),
+    path('jobs/<job_id>/applicants/', views.view_applicants),    
+    path('jobs/<job_id>/apply/', views.ApplyView),
     path('my_jobs/', views.my_jobs.as_view()),
     path('jobs/state/<str:input_state>/',views.JobListView.as_view()), #filter by state
     path('jobs/city/<str:input_city>/',views.JobListView.as_view()), #filter by city
