@@ -1,14 +1,17 @@
 
 from ast import Delete
+from asyncio.windows_events import NULL
 from cgi import print_form
 from multiprocessing import managers
 from pickle import GET
 from pickletools import read_int4
+from django.forms import NullBooleanField
 from django.http import HttpResponse
+from django.urls import is_valid_path
 from rest_framework import viewsets
 from rest_framework import permissions
-from .serializers import ApplicantSerializer, InternshipSerializer, UserSerializer, JobSerializer
-from .models import Applicant, Internship, Manager, UserProfile, Job
+from .serializers import ApplicantSerializer, InternshipSerializer, ResumeSerializer, UserSerializer, JobSerializer
+from .models import Applicant, Internship, Manager, Resume, UserProfile, Job
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -140,11 +143,29 @@ class JobListView(APIView):
     
 class InternshipListView(APIView):
     #list all jobs, or create a new job listing.
-    def get(self, request, format=None):
-        internships = Internship.objects.all()
-        serializer_context={'request': request}
-        serializer = InternshipSerializer(internships, context=serializer_context, many=True)
-        return Response(serializer.data)
+    # def get(self, request, format=None):
+    #     internships = Internship.objects.all()
+    #     serializer_context={'request': request}
+    #     serializer = InternshipSerializer(internships, context=serializer_context, many=True)
+    #     return Response(serializer.data)
+    
+    def get(self, request, input_state=None, input_city=None):
+        try:
+            internships = Internship.objects.filter(internship_status__contains="Open")
+            print(internships)
+            if input_state and input_city:
+                internships = internships.filter(state=input_state, city=input_city)
+            elif input_state:
+                internships = internships.filter(state=input_state)
+            elif input_city:
+                internships = internships.filter(city=input_city)
+
+            serializer = InternshipSerializer(internships, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            # Handle specific validation errors (e.g., invalid filter parameters)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     def post(self, request):
         if request.user.is_authenticated:
@@ -161,6 +182,15 @@ class InternshipListView(APIView):
             else:
                 return Response("Must be logged into a Manager Profile to post an Internship Listing")
 
+class InternshipDetailView(APIView):
+    def get(self, request, internship_id):
+        internships = Internship.objects.get(internship_id=internship_id)
+        serializer = InternshipSerializer(internships)
+        if serializer.is_valid:
+            return Response(serializer.data)
+        else:
+            return Response("Error loading Internship", status=status.HTTP_400_BAD_REQUEST)
+
 class JobDetailView(APIView):
     def get(self, request, job_id):
         jobs = Job.objects.get(job_id=job_id)
@@ -171,7 +201,7 @@ class JobDetailView(APIView):
             return Response("Error loading Job", status=status.HTTP_400_BAD_REQUEST)
 
 class my_jobs(APIView):
-    def get(request):
+    def get(self, request):
        if request.user.is_authenticated:
             user = request.user
             if request.user.is_manager:
@@ -181,6 +211,18 @@ class my_jobs(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response("Must be logged into a Manager Profile to view your Company Listings.")
+            
+    def delete(self, request, job_id):
+        if request.user.is_authenticated:
+            user = request.user
+            if request.user.is_manager:
+                manager = Manager.objects.get(user = user)
+                job = Job.objects.get(job_id = job_id)
+                if (job.hiring_manager == manager):
+                    return Response("Job deleted", status=status.HTTP_404_NOT_FOUND)
+                else:
+                    return Response("Must be logged into a Manager Profile to modify your Company Listings.")
+        return Response("Authentication Error. Login and try again")
     
     def patch(self, request):
        if request.user.is_authenticated:
@@ -190,6 +232,49 @@ class my_jobs(APIView):
                 manager_id = manager.id
                 request.data['hiring_manager'] = manager_id
                 serializer = JobSerializer(data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response("Invalid Credentials", status=status.HTTP_401_UNAUTHORIZED)
+
+class my_internships(APIView):
+    def get(self, request):
+       if request.user.is_authenticated:
+            user = request.user
+            if request.user.is_manager:
+                manager = Manager.objects.get(user = user)
+                internships = Internship.objects.filter(hiring_manager = manager)
+                serializer = InternshipSerializer(internships, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response("Must be logged into a Manager Profile to view your Company Listings.")
+            
+    def delete(self, request, internship_id):
+        if request.user.is_authenticated:
+            user = request.user
+            if request.user.is_manager:
+                manager = Manager.objects.get(user = user)
+                test_internship = Internship.objects.filter(internship_id=internship_id)
+                if not test_internship:
+                    return Response("Internship ID does not exist.")
+                internship = Internship.objects.get(internship_id=internship_id)
+                if (internship.hiring_manager == manager):
+                    internship.delete()
+                    # Internship.objects.delete(internship)
+                    return Response("Internship deleted", status=status.HTTP_404_NOT_FOUND)
+                else:
+                    return Response("Must be logged into a Manager Profile to modify your Company Listings.")
+        return Response("Authentication Error. Login and try again")
+    
+    def patch(self, request):
+       if request.user.is_authenticated:
+            user = request.user
+            if request.user.is_manager:
+                manager = Manager.objects.get(user=user)
+                manager_id = manager.id
+                request.data['hiring_manager'] = manager_id
+                serializer = InternshipSerializer(data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()
                     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -206,7 +291,32 @@ def ApplyView(request, job_id):
             print(job_id)
             job.job_applicants.add(applicant)
             return Response("Successfully Applied", status=status.HTTP_202_ACCEPTED)
-        return Response("Error with application. Ensure you are signed in to an applicant profile, and that the job listing is open", status=status.HTTP_400_BAD_REQUEST)
+        return Response("Error with application. Ensure you are signed in to an applicant profile,"
+                        " and that the job listing is open", status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PUT'])
+def AddResumeView(request):
+    if request.user.is_authenticated:
+        if request.user.is_applicant:
+            cur_applicant = Applicant.objects.get(user=request.user)
+            existing_resume = Resume.objects.filter(applicant=cur_applicant)
+            print(existing_resume)
+            if not existing_resume:
+                resume = request.data['resume']
+                Resume.objects.create(applicant=cur_applicant, resume=resume)
+                return Response("Successfully Added Resume", status=status.HTTP_202_ACCEPTED)
+                # request.data['applicant'] = cur_applicant
+                # print(request.data)
+                # serializer = ResumeSerializer(data=request.data)
+                # print(serializer)
+                # if serializer.is_valid():
+                #     serializer.save()
+                #     return Response("Successfully Added Resume", status=status.HTTP_202_ACCEPTED)
+            else:
+                return Response("Only one Resume can be added per account.") 
+        return Response("Please log into an Applicant Account")
+    return Response("Error with authentication. Login again.")  
     
 @api_view(['GET'])
 def view_applicants(request, job_id):
@@ -223,6 +333,28 @@ def view_applicants(request, job_id):
 
             print("3")
             if job.hiring_manager == manager:
+                print("4")
+                serializer = ApplicantSerializer(applicants, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response("Error loading Applicants", status=status.HTTP_400_BAD_REQUEST)
+    return Response("Please login to view this page", status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['GET'])
+def view_internship_applicants(request, internship_id):
+    if request.user.is_authenticated:
+        user = request.user
+        if request.user.is_manager:
+            manager = Manager.objects.get(user=user)
+            print("Manager:", manager)
+            print("1")
+            internship = Internship.objects.get(internship_id=internship_id)
+            print("2")
+            applicants = Internship.internship_applicants.all()
+            print(type(applicants))
+
+            print("3")
+            if internship.hiring_manager == manager:
                 print("4")
                 serializer = ApplicantSerializer(applicants, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
