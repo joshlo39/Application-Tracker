@@ -1,5 +1,5 @@
 from datetime import date
-from .models import Internship, UserProfile, Job, JobInterview, ApplicantJob, Applicant, Manager, ApplicantInternship, InternshipInterview
+from .models import Internship, Resume, UserProfile, Job, JobInterview, ApplicantJob, Applicant, Manager, ApplicantInternship, InternshipInterview
 from rest_framework import serializers
 
 
@@ -48,4 +48,10 @@ class ApplicantInternshipSerializer(serializers.ModelSerializer):
 class InternshipInterviewSerializer(serializers.ModelSerializer):
     class Meta: 
         model = InternshipInterview
+        fields = '__all__'
+
+class ResumeSerializer(serializers.ModelSerializer):
+    applicant = ApplicantSerializer()
+    class Meta: 
+        model = Resume
         fields = '__all__'
