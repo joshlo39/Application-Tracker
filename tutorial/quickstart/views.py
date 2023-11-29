@@ -1,6 +1,6 @@
 
 from ast import Delete
-from asyncio.windows_events import NULL
+#from asyncio.windows_events import NULL
 from cgi import print_form
 from multiprocessing import managers
 from pickle import GET
@@ -13,7 +13,7 @@ from django.urls import is_valid_path
 from rest_framework import viewsets
 from rest_framework import permissions
 from .serializers import ApplicantSerializer, InternshipSerializer, ResumeSerializer, UserSerializer, JobSerializer
-from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, Manager, Resume, UserProfile, Job
+from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, Manager, Resume, UserProfile, Job,JobInterview,InternshipInterview
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -23,6 +23,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import redirect
 from rest_framework.decorators import api_view
 from django.core.exceptions import ValidationError 
+
 
 def index(request):
     return HttpResponse("Gamified Job Application Tracker")
@@ -389,3 +390,23 @@ def InternApplyView(request, internship_id):
                     return Response("Error: You have already applied for this internship.", status=status.HTTP_400_BAD_REQUEST)
     return Response("Error with application. Ensure you are signed in to an applicant profile,"
                         " and that the internship listing is open", status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+def view_applicant_interviews(request,applicant_id):
+    try: 
+        applicant = Applicant.objects.get(id=applicant_id)
+        
+                # Fetch job interviews
+        job_interviews = JobInterview.objects.filter(job_id__job_applicants=applicant).values(
+            'interview_id', 'job_id__job_name', 'date', 'type_of_interview'
+        )
+                # Fetch internship interviews
+        internship_interviews = InternshipInterview.objects.filter(internship_id__internship_applicants=applicant).values(
+            'interview_id', 'internship_id__internship_name', 'date', 'type_of_interview'
+        )
+        print("applicant exists" + applicant_id)
+        totalInterviews = list(job_interviews) + list(internship_interviews)
+        return JsonResponse({"interviews": totalInterviews}, status=status.HTTP_200_OK)
+    except Applicant.DoesNotExist:
+        return JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
+    
