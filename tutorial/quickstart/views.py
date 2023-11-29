@@ -5,13 +5,15 @@ from cgi import print_form
 from multiprocessing import managers
 from pickle import GET
 from pickletools import read_int4
+import stat
+from sys import intern
 from django.forms import NullBooleanField
 from django.http import HttpResponse
 from django.urls import is_valid_path
 from rest_framework import viewsets
 from rest_framework import permissions
 from .serializers import ApplicantSerializer, InternshipSerializer, ResumeSerializer, UserSerializer, JobSerializer
-from .models import Applicant, Internship, Manager, Resume, UserProfile, Job
+from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, Manager, Resume, UserProfile, Job
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -141,14 +143,7 @@ class JobListView(APIView):
                 return Response("Must be logged into Manager Profile to post a Job Listing")
     
     
-class InternshipListView(APIView):
-    #list all jobs, or create a new job listing.
-    # def get(self, request, format=None):
-    #     internships = Internship.objects.all()
-    #     serializer_context={'request': request}
-    #     serializer = InternshipSerializer(internships, context=serializer_context, many=True)
-    #     return Response(serializer.data)
-    
+class InternshipListView(APIView):    
     def get(self, request, input_state=None, input_city=None):
         try:
             internships = Internship.objects.filter(internship_status__contains="Open")
@@ -184,12 +179,15 @@ class InternshipListView(APIView):
 
 class InternshipDetailView(APIView):
     def get(self, request, internship_id):
-        internships = Internship.objects.get(internship_id=internship_id)
-        serializer = InternshipSerializer(internships)
-        if serializer.is_valid:
-            return Response(serializer.data)
-        else:
-            return Response("Error loading Internship", status=status.HTTP_400_BAD_REQUEST)
+        internships = Internship.objects.filter(internship_id=internship_id)
+        if internships:
+            internship = Internship.objects.get(internship_id=internship_id)
+            serializer = InternshipSerializer(internship)
+            if serializer.is_valid:
+                return Response(serializer.data)
+            else:
+                return Response("Error loading Internship", status=status.HTTP_400_BAD_REQUEST)
+        return Response("No internship with that ID.", status=status.HTTP_404_NOT_FOUND)
 
 class JobDetailView(APIView):
     def get(self, request, job_id):
@@ -288,12 +286,15 @@ def ApplyView(request, job_id):
         if request.user.is_applicant:
             applicant = Applicant.objects.get(user=request.user)
             job = Job.objects.get(job_id = job_id)
-            print(job_id)
             job.job_applicants.add(applicant)
-            return Response("Successfully Applied", status=status.HTTP_202_ACCEPTED)
-        return Response("Error with application. Ensure you are signed in to an applicant profile,"
+            application_check = ApplicantJob.objects.filter(job_id=job, user_id=request.user)
+            if not application_check:
+                ApplicantJob.objects.create(job_id=job, application_status="Applied", user_id=request.user)
+                return Response("Successfully Applied", status=status.HTTP_202_ACCEPTED)
+            return Response("Error: You have already applied for this job.", status=status.HTTP_400_BAD_REQUEST)
+    return Response("Error with application. Ensure you are signed in to an applicant profile,"
                         " and that the job listing is open", status=status.HTTP_400_BAD_REQUEST)
-    
+
 
 @api_view(['PUT'])
 def AddResumeView(request):
@@ -306,13 +307,6 @@ def AddResumeView(request):
                 resume = request.data['resume']
                 Resume.objects.create(applicant=cur_applicant, resume=resume)
                 return Response("Successfully Added Resume", status=status.HTTP_202_ACCEPTED)
-                # request.data['applicant'] = cur_applicant
-                # print(request.data)
-                # serializer = ResumeSerializer(data=request.data)
-                # print(serializer)
-                # if serializer.is_valid():
-                #     serializer.save()
-                #     return Response("Successfully Added Resume", status=status.HTTP_202_ACCEPTED)
             else:
                 return Response("Only one Resume can be added per account.") 
         return Response("Please log into an Applicant Account")
@@ -324,21 +318,42 @@ def view_applicants(request, job_id):
         user = request.user
         if request.user.is_manager:
             manager = Manager.objects.get(user=user)
-            print("Manager:", manager)
-            print("1")
             job = Job.objects.get(job_id=job_id)
-            print("2")
             applicants = job.job_applicants.all()
-            print(type(applicants))
-
-            print("3")
             if job.hiring_manager == manager:
-                print("4")
                 serializer = ApplicantSerializer(applicants, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response("Error loading Applicants", status=status.HTTP_400_BAD_REQUEST)
     return Response("Please login to view this page", status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['PUT'])
+def update_job_application_status(request, job_id, applicant_id):
+    if request.user.is_authenticated:
+        user = request.user
+        if request.user.is_manager:
+            manager = Manager.objects.get(user=user)
+            job = Job.objects.get(job_id=job_id)
+            print(manager)
+            print(job.hiring_manager)
+            if job.hiring_manager == manager:
+                applicant = Applicant.objects.get(id=applicant_id)
+                user = applicant.user
+                applicant_job = ApplicantJob.objects.filter(job_id=job, user_id=user)
+                if applicant_job:
+                    new_status = request.data['Status']
+                    try:
+                        applicant_job.job_status=new_status
+                    except ValidationError:
+                        return Response("Invalid Status. Valid Options: "
+                                        "Applied, Coding Assessment, Interview,"
+                                         " Offer Received, Rejected", status=status.HTTP_400_BAD_REQUEST)
+                    return Response("Status Updated", status=status.HTTP_202_ACCEPTED)
+                else:
+                    return Response("This applicant has not applied to this job", status=status.HTTP_400_BAD_REQUEST)
+            return Response("Login to Correct Manager Profile", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("Login to Manager Profile", status=status.HTTP_401_UNAUTHORIZED)
+
 
 @api_view(['GET'])
 def view_internship_applicants(request, internship_id):
@@ -346,18 +361,31 @@ def view_internship_applicants(request, internship_id):
         user = request.user
         if request.user.is_manager:
             manager = Manager.objects.get(user=user)
-            print("Manager:", manager)
-            print("1")
             internship = Internship.objects.get(internship_id=internship_id)
-            print("2")
-            applicants = Internship.internship_applicants.all()
-            print(type(applicants))
-
-            print("3")
+            applicants = internship.internship_applicants.all()
+            print(manager)
+            print(internship.hiring_manager)
             if internship.hiring_manager == manager:
-                print("4")
                 serializer = ApplicantSerializer(applicants, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response("Error loading Applicants", status=status.HTTP_400_BAD_REQUEST)
     return Response("Please login to view this page", status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['PUT'])
+def InternApplyView(request, internship_id):
+    if request.user.is_authenticated:
+        if request.user.is_applicant:
+            applicant = Applicant.objects.get(user=request.user)
+            internships = Internship.objects.filter(internship_id = internship_id)
+            if internships:
+                internship = Internship.objects.get(internship_id = internship_id)
+                internship.internship_applicants.add(applicant)
+                application_check = ApplicantInternship.objects.filter(internship_id=internship, user_id=request.user)
+                if not application_check:
+                    ApplicantInternship.objects.create(internship_id=internship, application_status="Applied", user_id=request.user)
+                    return Response("Successfully Applied", status=status.HTTP_202_ACCEPTED)
+                else:
+                    return Response("Error: You have already applied for this internship.", status=status.HTTP_400_BAD_REQUEST)
+    return Response("Error with application. Ensure you are signed in to an applicant profile,"
+                        " and that the internship listing is open", status=status.HTTP_400_BAD_REQUEST)

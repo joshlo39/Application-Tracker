@@ -57,10 +57,13 @@ class ApplicantJob(models.Model):
         ("Ghosted", "Ghosted")
     ]
     user_id = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    date_applied = models.DateField()
+    date_applied = models.DateField(default=date.today)
     #status = models.CharField(max_length=50,choices = status_choices)
     application_status = models.CharField(max_length=100, choices=status_choices)
     points = models.IntegerField
+
+    def __str__(self):
+        return self.job_id.job_name
 
 class JobInterview(models.Model):
     type_choices = [
@@ -89,6 +92,7 @@ class Internship(models.Model):
     date_posted = models.DateField(default=date.today)
     #status = models.CharField(max_length=50,choices = status_choices)
     internship_status = models.CharField(max_length=100)
+    internship_applicants = models.ManyToManyField(Applicant, null=True, blank=True)
 
 class ApplicantInternship(models.Model):
     internship_id = models.OneToOneField(Internship, on_delete=models.CASCADE, primary_key=True)
@@ -101,7 +105,7 @@ class ApplicantInternship(models.Model):
         ("Ghosted", "Ghosted")
     ]
     user_id = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    date_applied = models.DateField()
+    date_applied = models.DateField(default=date.today)
     #status = models.CharField(max_length=50,choices = status_choices)
     application_status = models.CharField(max_length=100, choices=status_choices)
     points = models.IntegerField  
@@ -125,10 +129,8 @@ class Resume(models.Model):
     resume_id = models.AutoField(primary_key=True)
     applicant = models.OneToOneField(Applicant, on_delete=models.CASCADE)
     resume = models.TextField(editable=True)
-    # Name = models.CharField(max_length=250)
-    # skills = models.CharField(max_length=250)
-    # phone_number = models.CharField(max_length=12)
-    # degree = models.CharField(max_length=250, null=True)
     def __str__(self):
         return self.applicant.user.username 
+    
+
 
