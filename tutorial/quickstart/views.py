@@ -433,7 +433,7 @@ def view_applicant_interviews(request,applicant_id):
         internship_interviews = InternshipInterview.objects.filter(internship_id__internship_applicants=applicant).values(
             'interview_id', 'internship_id__internship_name', 'date', 'type_of_interview'
         )
-        print("applicant exists" + applicant_id)
+        print("applicant exists" + str(applicant))
         totalInterviews = list(job_interviews) + list(internship_interviews)
         return JsonResponse({"interviews": totalInterviews}, status=status.HTTP_200_OK)
     except Applicant.DoesNotExist:
