@@ -12,7 +12,7 @@ from django.http import HttpResponse
 from django.urls import is_valid_path
 from rest_framework import viewsets
 from rest_framework import permissions
-from .serializers import ApplicantSerializer, InternshipSerializer, ResumeSerializer, UserSerializer, JobSerializer
+from .serializers import ApplicantSerializer, InternshipSerializer, ManagerSerializer, ResumeSerializer, UserSerializer, JobSerializer
 from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, Manager, Resume, UserProfile, Job,JobInterview,InternshipInterview
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -27,7 +27,25 @@ from django.core.exceptions import ValidationError
 
 def index(request):
     return HttpResponse("Gamified Job Application Tracker")
-    
+
+@api_view(['GET'])
+def view_mgmt(self):
+    users = UserProfile.objects.filter(is_manager=True)
+    managers = Manager.objects.filter(user__in=users)
+    if users:
+        serializer=ManagerSerializer(managers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response("No Managers Found", status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def view_all_applicants(self):
+    users = UserProfile.objects.filter(is_applicant=True)
+    all_applicants = Applicant.objects.filter(user__in=users)
+    if users:
+        serializer=ApplicantSerializer(all_applicants, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response("No Applicants Found", status=status.HTTP_404_NOT_FOUND)
+
 @api_view(['GET'])
 def view_open(self):
     jobs = Job.objects.filter(job_status="Open")
@@ -135,7 +153,12 @@ class JobListView(APIView):
                 manager_id = manager.id
                 request.data['hiring_manager'] = manager_id
                 serializer = JobSerializer(data=request.data)
-                
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if request.user.is_staff:
+                serializer = JobSerializer(data=request.data)
                 if serializer.is_valid():
                     serializer.save()
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -175,6 +198,12 @@ class InternshipListView(APIView):
                     serializer.save()
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if request.user.is_staff:
+                serializer = InternshipSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)             
             else:
                 return Response("Must be logged into a Manager Profile to post an Internship Listing")
 

@@ -26,6 +26,8 @@ urlpatterns = [
     path('register/', views.UserProfileView.as_view()), 
     path('register/manager_account/', views.set_company, name='set_company'), 
     path('users/', views.UserProfileView.as_view()), 
+    path('users/managers/', views.view_mgmt), 
+    path('users/applicants/', views.view_all_applicants),
     path('profile/', views.UserProfileView.as_view()), 
     path('profile/add_resume/', views.AddResumeView), 
     path('admin/', admin.site.urls),
