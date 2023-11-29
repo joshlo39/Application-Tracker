@@ -80,7 +80,6 @@ class JobInterview(models.Model):
     type_of_interview = models.CharField(max_length=100)
     dsa_question = models.CharField(max_length = 100,blank=True, null = True)
     
-
 class Internship(models.Model):
     internship_id = models.AutoField (primary_key=True)
     internship_name = models.CharField(max_length=100)
@@ -93,6 +92,9 @@ class Internship(models.Model):
     #status = models.CharField(max_length=50,choices = status_choices)
     internship_status = models.CharField(max_length=100)
     internship_applicants = models.ManyToManyField(Applicant, null=True, blank=True)
+
+    def __str__(self):
+        return self.internship_name 
 
 class ApplicantInternship(models.Model):
     internship_id = models.OneToOneField(Internship, on_delete=models.CASCADE, primary_key=True)
