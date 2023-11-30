@@ -54,4 +54,5 @@ urlpatterns = [
     path('update_points/<int:applicant_id>/points/<int:num_of_points>/', views.update_applicant_points),
     path('test_update_points/<int:applicant_id>/', views.test_update_applicant_points),
     path('points/<int:applicant_id>/', views.view_amount_of_points),
+    path('applied_jobs/<int:applicant_id>/', views.get_list_of_applied_jobs),
 ]

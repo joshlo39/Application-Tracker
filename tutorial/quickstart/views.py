@@ -441,6 +441,17 @@ def view_applicant_interviews(request,applicant_id):
     except Applicant.DoesNotExist:
         return JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
     
+    
+@api_view(['GET'])
+def get_list_of_applied_jobs(request, applicant_id):
+    try:
+        applicant = Applicant.objects.get(id=applicant_id)
+        jobs = Job.objects.filter(job_applicants=applicant)
+        serializer = JobSerializer(jobs, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+    except Applicant.DoesNotExist:
+        return JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
+    
 @api_view(['GET'])
 def test_update_applicant_points(request,applicant_id):
     applicant = Applicant.objects.get(id=applicant_id)
