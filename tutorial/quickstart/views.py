@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from django.urls import is_valid_path
 from rest_framework import viewsets
 from rest_framework import permissions
-from .serializers import ApplicantSerializer, InternshipSerializer, InterviewInvitationSerializer, ManagerSerializer, ResumeSerializer, UserSerializer, JobSerializer
+from .serializers import ApplicantSerializer, ApplicantJobSerializer,InterviewInvitationSerializer, InternshipSerializer, ManagerSerializer, ResumeSerializer, UserSerializer, JobSerializer, ApplicantInternshipSerializer
 from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, InterviewInvitation, Manager, Resume, UserProfile, Job,JobInterview,InternshipInterview
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -535,3 +535,41 @@ def upcoming_interviews(request):
     upcoming_interviews = Interview.objects.filter(interview_datetime__gt=current_datetime)
     return render(request, 'interviews/upcoming_interviews.html', {'upcoming_interviews': upcoming_interviews})
     
+
+
+class JobDetailView(APIView):
+    """
+    Retrieve a specific job's details.
+    """
+    def get(self, request, job_id):
+        job = Job.objects.filter(job_id=job_id).first()
+        if job is None:
+            return Response({'message': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = JobSerializer(job)
+        return Response(serializer.data)
+    
+
+class JobOfferListView(APIView):
+    def get(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        
+        
+        offers = ApplicantJob.objects.filter(user_id=user, application_status="Offer Receieved")
+        serializer = ApplicantJobSerializer(offers, many=True)
+        return Response(serializer.data)  
+
+
+class InternshipOfferListView(APIView):
+    def get(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        
+        # Filter internships where the application status is 'Offer Received'
+        offers = ApplicantInternship.objects.filter(user_id=user, application_status="Offer Receieved")
+        serializer = ApplicantInternshipSerializer(offers, many=True)
+        return Response(serializer.data)
+
