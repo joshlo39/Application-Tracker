@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .quickstart import views
+from .quickstart import views 
+from django.urls import path
+from .views import upcoming_interviews
 
 
 urlpatterns = [
@@ -55,4 +57,8 @@ urlpatterns = [
     path('test_update_points/<int:applicant_id>/', views.test_update_applicant_points),
     path('points/<int:applicant_id>/', views.view_amount_of_points),
     path('applied_jobs/<int:applicant_id>/', views.get_list_of_applied_jobs),
+    path('upcoming_interviews/', upcoming_interviews, name='upcoming_interviews'),
+    path('interview-invitations/<int:user_id>/', views.view_interview_invitations),
+    path('interviews/upcoming/', upcoming_interviews, name='upcoming_interviews'),
+
 ]
