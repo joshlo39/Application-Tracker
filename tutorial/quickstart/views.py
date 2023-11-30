@@ -362,10 +362,8 @@ def view_applicants(request, job_id):
 
 @api_view(['PUT'])
 def update_job_application_status(request, job_id, applicant_id):
-    
     if request.user.is_authenticated:
         user = request.user
-        update_applicant_points(applicant_id, 50)
         if request.user.is_manager:
             manager = Manager.objects.get(user=user)
             job = Job.objects.get(job_id=job_id)
@@ -383,12 +381,41 @@ def update_job_application_status(request, job_id, applicant_id):
                         return Response("Invalid Status. Valid Options: "
                                         "Applied, Coding Assessment, Interview,"
                                          " Offer Received, Rejected", status=status.HTTP_400_BAD_REQUEST)
+                                        
+                    update_applicant_points(applicant_id, 50)
                     return Response("Status Updated", status=status.HTTP_202_ACCEPTED)
                 else:
                     return Response("This applicant has not applied to this job", status=status.HTTP_400_BAD_REQUEST)
             return Response("Login to Correct Manager Profile", status=status.HTTP_401_UNAUTHORIZED)
         return Response("Login to Manager Profile", status=status.HTTP_401_UNAUTHORIZED)
 
+@api_view(['PUT'])
+def update_internship_application_status(request, internship_id, applicant_id):
+    if request.user.is_authenticated:
+        user = request.user
+        if request.user.is_manager:
+            manager = Manager.objects.get(user=user)
+            internship = Internship.objects.get(internship_id=internship_id)
+            print(manager)
+            print(internship.hiring_manager)
+            if internship.hiring_manager == manager:
+                applicant = Applicant.objects.get(id=applicant_id)
+                user = applicant.user
+                applicant_internship = ApplicantInternship.objects.filter(internship_id=internship_id, user_id=user)
+                if applicant_internship:
+                    new_status = request.data['Status']
+                    try:
+                        applicant_internship.application_status=new_status
+                    except ValidationError:
+                        return Response("Invalid Status. Valid Options: "
+                                        "Applied, Coding Assessment, Interview,"
+                                         " Offer Received, Rejected", status=status.HTTP_400_BAD_REQUEST)     
+                    update_applicant_points(applicant_id, 50)
+                    return Response("Status Updated", status=status.HTTP_202_ACCEPTED)
+                else:
+                    return Response("This applicant has not applied to this internship", status=status.HTTP_400_BAD_REQUEST)
+            return Response("Login to Correct Manager Profile", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("Login to Manager Profile", status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
 def view_internship_applicants(request, internship_id):
