@@ -7,6 +7,7 @@ from pickle import GET
 from pickletools import read_int4
 import stat
 from sys import intern
+from django.core.exceptions import ObjectDoesNotExist
 from django.forms import NullBooleanField
 from django.http import HttpResponse
 from django.urls import is_valid_path
@@ -359,6 +360,7 @@ def view_applicants(request, job_id):
 
 @api_view(['PUT'])
 def update_job_application_status(request, job_id, applicant_id):
+    
     if request.user.is_authenticated:
         user = request.user
         if request.user.is_manager:
@@ -439,3 +441,23 @@ def view_applicant_interviews(request,applicant_id):
     except Applicant.DoesNotExist:
         return JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
     
+@api_view(['GET'])
+def test_update_applicant_points(request,applicant_id):
+    applicant = Applicant.objects.get(id=applicant_id)
+    print(applicant.user.email)
+    update_applicant_points( applicant_id, 10)
+    return JsonResponse({'message': 'Points updated successfully'}, status=status.HTTP_200_OK)
+@api_view(['GET'])
+def view_amount_of_points(request,applicant_id):
+    applicant = Applicant.objects.get(id=applicant_id)
+    if applicant:
+        return JsonResponse({'points': applicant.points_scored}, status=status.HTTP_200_OK)
+    return JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
+def update_applicant_points(applicant_id,num_of_points):
+    applicant = Applicant.objects.get(id=applicant_id)
+    if applicant:
+        applicant.points_scored = num_of_points
+        applicant.save()
+        return JsonResponse({'message': 'Points updated successfully'}, status=status.HTTP_200_OK)
+    else:
+        JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
