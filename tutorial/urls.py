@@ -47,6 +47,7 @@ urlpatterns = [
     path('internships/<internship_id>/apply/', views.InternApplyView),     
     path('internships/<internship_id>/applicants/', views.view_internship_applicants),
     path('internships/<internship_id>/applicants/<applicant_id>', views.view_internship_applicants),
+    path('internships/<internship_id>/applicants/<applicant_id>/', views.update_internship_application_status),
     path('my_internships/', views.my_internships.as_view()),
     path('my_internships/<internship_id>/', views.my_internships.as_view()),    
     path('accounts/', include('django.contrib.auth.urls')),
