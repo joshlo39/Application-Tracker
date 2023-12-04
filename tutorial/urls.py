@@ -57,6 +57,7 @@ urlpatterns = [
     path('my_internships/', views.my_internships.as_view()),
     path('my_internships/<internship_id>/', views.my_internships.as_view()),    
     path('accounts/', include('django.contrib.auth.urls')),
+<<<<<<< HEAD
     path('upcoming_interviews/', upcoming_interviews, name='upcoming_interviews'),
     path('jobs/<int:job_id>/apply/', views.ApplyView),
     path('interviews/view_interview_invitations/', views.view_interview_invitations, name='view_interview_invitations'),
@@ -64,5 +65,15 @@ urlpatterns = [
     path('api/upcoming_interviews/', upcoming_interviews, name='upcoming_interviews'),
 
 
+=======
+    path('interviews/<int:applicant_id>/', views.view_applicant_interviews),
+    path('update_points/<int:applicant_id>/points/<int:num_of_points>/', views.update_applicant_points),
+    path('test_update_points/<int:applicant_id>/', views.test_update_applicant_points),
+    path('points/<int:applicant_id>/', views.view_amount_of_points),
+    path('applied_jobs/<int:applicant_id>/', views.get_list_of_applied_jobs),
+    path('my_jobs/my_job_offers/', views.JobOfferListView.as_view()),
+    path('open_jobs/', views.view_open),
+    path('my_internship_offers/', views.InternshipOfferListView.as_view()),
+>>>>>>> Summer-11.29
 
 ]
