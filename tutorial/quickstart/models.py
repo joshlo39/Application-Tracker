@@ -1,9 +1,9 @@
-from datetime import date
+from datetime import date, timezone  #timezone by oscar
 from django.db import models
 from django.forms import CharField, IntegerField
 from multiselectfield import MultiSelectField
-from django.contrib.auth.models import AbstractUser
-from tutorial.quickstart.models import UserProfile
+from django.contrib.auth.models import AbstractUser 
+
 
 
 #User class for the user model
@@ -26,6 +26,12 @@ class Manager(models.Model):
     
     def __str__(self):
         return self.user.username
+    
+    "<------------>"
+    def get_upcoming_interviews(self):
+        today = timezone.now().date()
+        return JobInterview.objects.filter(date__gte=today, hiring_manager=self)
+    "<------------>"
 
 class Job(models.Model):
     job_id = models.AutoField (primary_key=True)
@@ -59,7 +65,7 @@ class ApplicantJob(models.Model):
     ]
     user_id = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     date_applied = models.DateField(default=date.today)
-    #status = models.CharField(max_length=50,choices = status_choices)
+    status = models.CharField(max_length=50,choices = status_choices)
     application_status = models.CharField(max_length=100, choices=status_choices)
     points = models.IntegerField
 
@@ -74,12 +80,25 @@ class JobInterview(models.Model):
         ("Onsite", "Onsite"),
         ("System Design", "System Design")
     ]
+    '<-------------------------------->'
+    status_choices = [
+        ("Applied", "Applied"),
+        ("Coding Assessment", "Coding Assessment"),
+        ("Interview", "Interview"),
+        ("Offer Receieved", "Offer Receieved"),
+        ("Rejected", "Rejected"),
+        ("Ghosted", "Ghosted")
+        
+    ]
+    '<-------------------------------->'
+    
     interview_id= models.AutoField (primary_key=True)
     job_id = models.ForeignKey(Job,on_delete=models.CASCADE)
     date = models.DateField()
     #type_of_interview = MultiSelectField(choices = type_choices)
     type_of_interview = models.CharField(max_length=100)
     dsa_question = models.CharField(max_length = 100,blank=True, null = True)
+    status = models.CharField(max_length=100, choices=status_choices, default="Pending")
     
 class Internship(models.Model):
     internship_id = models.AutoField (primary_key=True)
@@ -135,21 +154,8 @@ class Resume(models.Model):
     def __str__(self):
         return self.applicant.user.username 
     
-class Interview(models.Model):
-    applicant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    scheduled_date = models.DateTimeField()
-
-    STATUS_CHOICES = [('Scheduled', 'Scheduled'),
-                      ('Completed', 'Completed'),
-                      ('Pending', 'Pending')]
-    
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled')
-
-    interview_datetime = models.DateTimeField()
-
 class InterviewInvitation(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    interview_date = models.DateTimeField()
-    status = models.CharField(max_length=255, default = "Pending")
+    date = models.DateTimeField()
 

@@ -13,12 +13,15 @@ Class-based views
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+
 """
 from django.contrib import admin
 from django.urls import include, path
-from .quickstart import views 
-from django.urls import path
-from .views import upcoming_interviews
+from .quickstart import views
+from .quickstart.views import upcoming_interviews, view_interview_invitations
+
+
+
 
 
 urlpatterns = [
@@ -51,17 +54,15 @@ urlpatterns = [
     path('internships/<internship_id>/apply/', views.InternApplyView),     
     path('internships/<internship_id>/applicants/', views.view_internship_applicants),
     path('internships/<internship_id>/applicants/<applicant_id>', views.view_internship_applicants),
-    path('internships/<internship_id>/applicants/<applicant_id>/', views.update_internship_application_status),
     path('my_internships/', views.my_internships.as_view()),
     path('my_internships/<internship_id>/', views.my_internships.as_view()),    
     path('accounts/', include('django.contrib.auth.urls')),
-    path('interviews/<int:applicant_id>/', views.view_applicant_interviews),
-    path('update_points/<int:applicant_id>/points/<int:num_of_points>/', views.update_applicant_points),
-    path('test_update_points/<int:applicant_id>/', views.test_update_applicant_points),
-    path('points/<int:applicant_id>/', views.view_amount_of_points),
-    path('applied_jobs/<int:applicant_id>/', views.get_list_of_applied_jobs),
     path('upcoming_interviews/', upcoming_interviews, name='upcoming_interviews'),
-    path('interview-invitations/<int:user_id>/', views.view_interview_invitations),
-    path('interviews/upcoming/', upcoming_interviews, name='upcoming_interviews'),
+    path('jobs/<int:job_id>/apply/', views.ApplyView),
+    path('interviews/view_interview_invitations/', views.view_interview_invitations, name='view_interview_invitations'),
+    path('api/update_interview_status/<int:interview_id>/', views.update_interview_status, name='update_interview_status'),
+    path('api/upcoming_interviews/', upcoming_interviews, name='upcoming_interviews'),
+
+
 
 ]
