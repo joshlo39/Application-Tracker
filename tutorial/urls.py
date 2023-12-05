@@ -32,6 +32,7 @@ urlpatterns = [
     path('profile/add_resume/', views.AddResumeView), 
     path('admin/', admin.site.urls),
     path('jobs/', views.JobListView.as_view()), #all jobs
+    path('jobs/my_job_offers/', views.JobOfferListView.as_view()), 
     path('jobs/<job_id>/', views.JobDetailView.as_view()),
     path('jobs/<job_id>/applicants/', views.view_applicants),  
     path('jobs/<job_id>/applicants/<applicant_id>/', views.update_job_application_status),      
@@ -41,8 +42,9 @@ urlpatterns = [
     path('jobs/state/<str:input_state>/',views.JobListView.as_view()), #filter by state
     path('jobs/city/<str:input_city>/',views.JobListView.as_view()), #filter by city
     path('jobs/state/<str:input_state>/city/<str:input_city>',views.JobListView.as_view()),
-    path('jobs/open/', views.view_open),    
+    path('jobs/open/', views.view_open),
     path('internships/', views.InternshipListView.as_view()),   
+    path('internships/my_internship_offers/', views.InternshipOfferListView.as_view()), 
     path('internships/<internship_id>/', views.InternshipDetailView.as_view()), 
     path('internships/<internship_id>/apply/', views.InternApplyView),     
     path('internships/<internship_id>/applicants/', views.view_internship_applicants),
@@ -59,5 +61,6 @@ urlpatterns = [
     path('my_jobs/my_job_offers/', views.JobOfferListView.as_view()),
     path('open_jobs/', views.view_open),
     path('my_internship_offers/', views.InternshipOfferListView.as_view()),
+
 
 ]

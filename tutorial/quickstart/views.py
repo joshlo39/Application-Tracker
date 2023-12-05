@@ -452,6 +452,86 @@ def InternApplyView(request, internship_id):
                     return Response("Error: You have already applied for this internship.", status=status.HTTP_400_BAD_REQUEST)
     return Response("Error with application. Ensure you are signed in to an applicant profile,"
                         " and that the internship listing is open", status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobDetailView(APIView):
+    """
+    Retrieve a specific job's details.
+    """
+    def get(self, request, job_id):
+        job = Job.objects.filter(job_id=job_id).first()
+        if job is None:
+            return Response({'message': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = JobSerializer(job)
+        return Response(serializer.data)
+    
+
+class JobOfferListView(APIView):
+    def get(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        
+        
+        offers = ApplicantJob.objects.filter(user_id=user, application_status="Offer Receieved")
+        serializer = ApplicantJobSerializer(offers, many=True)
+        return Response(serializer.data)  
+
+
+class InternshipOfferListView(APIView):
+    def get(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        
+        # Filter internships where the application status is 'Offer Received'
+        offers = ApplicantInternship.objects.filter(user_id=user, application_status="Offer Receieved")
+        serializer = ApplicantInternshipSerializer(offers, many=True)
+        return Response(serializer.data)
+
+'<--------->'
+
+@login_required
+def upcoming_interviews(request):
+    
+    manager = get_object_or_404(Manager, user=request.user)
+
+    
+    upcoming_interviews = JobInterview.objects.filter(hiring_manager=manager, date__gte=datetime.date.today())
+
+    
+    response_data = {
+        'upcoming_interviews': [
+            {
+                'date': interview.date,
+                'type_of_interview': interview.type_of_interview,
+                'job_title': interview.job_id.job_name,
+                
+            }
+            for interview in upcoming_interviews
+        ]
+    }
+
+    
+    if request.headers.get('accept') == 'application/json':
+        return JsonResponse(response_data)
+    else:
+        return render(request, 'upcoming_interviews.html', {'upcoming_interviews': upcoming_interviews})
+    
+@api_view(['PUT'])
+def ApplyView(request, job_id):
+    if request.user.is_authenticated:
+        if request.user.is_applicant:
+            applicant = Applicant.objects.get(user=request.user)
+            job = Job.objects.get(job_id=job_id)
+            job.job_applicants.add(applicant)
+
+            return Response("Successfully Applied", status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response("Only applicants can apply for jobs.", status=status.HTTP_403_FORBIDDEN)
+    return Response("Authentication required to apply for a job.", status=status.HTTP_401_UNAUTHORIZED)
+
     
 @api_view(['GET'])
 def view_applicant_interviews(request,applicant_id):
@@ -501,7 +581,7 @@ def view_amount_of_points(request,applicant_id):
 def update_applicant_points(applicant_id,num_of_points):
     applicant = Applicant.objects.get(id=applicant_id)
     if applicant:
-        applicant.points_scored = applicant.points_scored + num_of_points
+        applicant.points_scored = num_of_points
         applicant.save()
         return JsonResponse({'message': 'Points updated successfully'}, status=status.HTTP_200_OK)
     else:
@@ -542,3 +622,4 @@ class InternshipOfferListView(APIView):
         offers = ApplicantInternship.objects.filter(user_id=user, application_status="Offer Receieved")
         serializer = ApplicantInternshipSerializer(offers, many=True)
         return Response(serializer.data)
+
