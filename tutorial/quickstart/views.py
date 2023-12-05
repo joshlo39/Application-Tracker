@@ -13,8 +13,8 @@ from django.http import HttpResponse
 from django.urls import is_valid_path
 from rest_framework import viewsets
 from rest_framework import permissions
-from .serializers import ApplicantSerializer, ApplicantJobSerializer,InterviewInvitationSerializer, InternshipSerializer, ManagerSerializer, ResumeSerializer, UserSerializer, JobSerializer, ApplicantInternshipSerializer
-from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, InterviewInvitation, Manager, Resume, UserProfile, Job,JobInterview,InternshipInterview
+from .serializers import ApplicantSerializer, InternshipSerializer, ManagerSerializer, ResumeSerializer, UserSerializer, JobSerializer
+from .models import Applicant, ApplicantInternship, ApplicantJob, Internship, Manager, Resume, UserProfile, Job,JobInterview,InternshipInterview
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -24,11 +24,6 @@ from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import redirect
 from rest_framework.decorators import api_view
 from django.core.exceptions import ValidationError 
-from django.shortcuts import render
-from django.contrib.auth.models import login_required
-from datetime import datetime
-from .models import Interview
-from django.utils import timezone
 
 
 def index(request):
@@ -511,65 +506,3 @@ def update_applicant_points(applicant_id,num_of_points):
         return JsonResponse({'message': 'Points updated successfully'}, status=status.HTTP_200_OK)
     else:
         JsonResponse({'error': 'The applicant does not exist'}, status=status.HTTP_404_NOT_FOUND)
-
-@login_required
-def upcoming_interviews(request):
-    current_date = datetime.now()
-    manager_id = request.user.id
-    upcoming_interviews = Interview.objects.filter(applicant__manager_id=manager_id, scheduled_date__gte=current_date)
-    return render(request, 'upcoming_interviews.html',{'interviews': upcoming_interviews})
-
-@api_view(['GET'])
-def view_interview_invitations(request, user_id):
-    try:
-        invitations = InterviewInvitation.objects.filter(user_id=user_id)
-        serializer = InterviewInvitationSerializer(invitations, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except InterviewInvitation.DoesNotExist:
-        return Response("No interview invitations found", status=status.HTTP_404_NOT_FOUND)
-    
-@login_required
-def upcoming_interviews(request):
-    current_datetime = timezone.now()
-    upcoming_interviews = Interview.objects.filter(interview_datetime__gt=current_datetime)
-    return render(request, 'interviews/upcoming_interviews.html', {'upcoming_interviews': upcoming_interviews})
-    
-
-
-class JobDetailView(APIView):
-    """
-    Retrieve a specific job's details.
-    """
-    def get(self, request, job_id):
-        job = Job.objects.filter(job_id=job_id).first()
-        if job is None:
-            return Response({'message': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = JobSerializer(job)
-        return Response(serializer.data)
-    
-
-class JobOfferListView(APIView):
-    def get(self, request):
-        user = request.user
-        if not user.is_authenticated:
-            return Response({'error': 'Authentication required'}, status=401)
-        
-        
-        offers = ApplicantJob.objects.filter(user_id=user, application_status="Offer Receieved")
-        serializer = ApplicantJobSerializer(offers, many=True)
-        return Response(serializer.data)  
-
-
-class InternshipOfferListView(APIView):
-    def get(self, request):
-        user = request.user
-        if not user.is_authenticated:
-            return Response({'error': 'Authentication required'}, status=401)
-        
-        # Filter internships where the application status is 'Offer Received'
-        offers = ApplicantInternship.objects.filter(user_id=user, application_status="Offer Receieved")
-        serializer = ApplicantInternshipSerializer(offers, many=True)
-        return Response(serializer.data)
-

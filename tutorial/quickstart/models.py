@@ -3,7 +3,6 @@ from django.db import models
 from django.forms import CharField, IntegerField
 from multiselectfield import MultiSelectField
 from django.contrib.auth.models import AbstractUser
-from tutorial.quickstart.models import UserProfile
 
 
 #User class for the user model
@@ -135,21 +134,5 @@ class Resume(models.Model):
     def __str__(self):
         return self.applicant.user.username 
     
-class Interview(models.Model):
-    applicant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    scheduled_date = models.DateTimeField()
 
-    STATUS_CHOICES = [('Scheduled', 'Scheduled'),
-                      ('Completed', 'Completed'),
-                      ('Pending', 'Pending')]
-    
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled')
-
-    interview_datetime = models.DateTimeField()
-
-class InterviewInvitation(models.Model):
-    job = models.ForeignKey(Job, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    interview_date = models.DateTimeField()
-    status = models.CharField(max_length=255, default = "Pending")
 

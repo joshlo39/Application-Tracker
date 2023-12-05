@@ -55,8 +55,3 @@ class ResumeSerializer(serializers.ModelSerializer):
     class Meta: 
         model = Resume
         fields = '__all__'
-
-class InterviewInvitationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = InterviewInvitation
-        fields = '__all__'
